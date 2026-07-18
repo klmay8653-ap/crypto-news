@@ -84,12 +84,19 @@ if [ -n "$RUNNING" ]; then
     fi
 fi
 
-# ─── Step 5: Start services ──────────────────────────────────
+# ─── Step 5: Clean stale containers ──────────────────────────
+# docker-compose v1 has a bug where recreated containers fail with
+# 'KeyError: ContainerConfig' when old metadata is stale.
+log "Cleaning up stale containers..."
+$COMPOSE down --remove-orphans 2>/dev/null || true
+docker rm -f crypto-backend crypto-frontend crypto-rsshub 2>/dev/null || true
+
+# ─── Step 6: Start services ──────────────────────────────────
 echo ""
 log "Starting services..."
 $COMPOSE up -d
 
-# ─── Step 6: Wait for ready ──────────────────────────────────
+# ─── Step 7: Wait for ready ──────────────────────────────────
 echo ""
 log "Waiting for backend to be ready..."
 
