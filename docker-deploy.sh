@@ -25,11 +25,16 @@ if ! command -v docker &> /dev/null; then
 fi
 log "docker found: $(docker --version)"
 
-if ! docker compose version &> /dev/null; then
-    err "docker compose not available. Please install Docker Compose plugin."
+# Detect docker compose (plugin v2: "docker compose", standalone v1: "docker-compose")
+if docker compose version &> /dev/null; then
+    COMPOSE="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    COMPOSE="docker-compose"
+else
+    err "docker compose not available. Please install Docker Compose."
     exit 1
 fi
-log "docker compose found: $(docker compose version)"
+log "docker compose found: $($COMPOSE version)"
 
 # ─── Step 2: Check existing images ────────────────────────────
 echo ""
@@ -55,12 +60,12 @@ fi
 if [ "${BUILD:-false}" = true ]; then
     echo ""
     log "Building Docker images..."
-    docker compose build --no-cache
+    $COMPOSE build --no-cache
     log "Build complete."
 fi
 
 # ─── Step 4: Check running containers ─────────────────────────
-RUNNING=$(docker compose ps --status running --format "{{.Service}}" 2>/dev/null || true)
+RUNNING=$($COMPOSE ps --status running --format "{{.Service}}" 2>/dev/null || true)
 if [ -n "$RUNNING" ]; then
     warn "Containers already running:"
     echo "$RUNNING" | sed 's/^/       /'
@@ -68,11 +73,11 @@ if [ -n "$RUNNING" ]; then
     read -rp "Restart services? [y/N] " RESTART
     if [[ "$RESTART" =~ ^[Yy]$ ]]; then
         log "Stopping existing containers..."
-        docker compose down
+        $COMPOSE down
     else
         log "Services already running. Nothing to do."
         echo ""
-        echo -e "  Frontend: ${CYAN}http://localhost${NC}"
+        echo -e "  Frontend: ${CYAN}http://localhost:3080${NC}"
         echo -e "  Backend:  ${CYAN}http://localhost:3001${NC}"
         echo -e "  Health:   ${CYAN}http://localhost:3001/api/health${NC}"
         exit 0
@@ -82,7 +87,7 @@ fi
 # ─── Step 5: Start services ──────────────────────────────────
 echo ""
 log "Starting services..."
-docker compose up -d
+$COMPOSE up -d
 
 # ─── Step 6: Wait for ready ──────────────────────────────────
 echo ""
@@ -95,7 +100,7 @@ for i in $(seq 1 $MAX_WAIT); do
         break
     fi
     if [ "$i" -eq "$MAX_WAIT" ]; then
-        warn "Backend did not become ready within ${MAX_WAIT}s. Check logs: docker compose logs backend"
+        warn "Backend did not become ready within ${MAX_WAIT}s. Check logs: $COMPOSE logs backend"
     fi
     sleep 1
 done
@@ -105,12 +110,12 @@ echo -e "${GREEN}======================================${NC}"
 echo -e "${GREEN}  Services running!${NC}"
 echo -e "${GREEN}======================================${NC}"
 echo ""
-echo -e "  Frontend: ${CYAN}http://localhost${NC}"
+echo -e "  Frontend: ${CYAN}http://localhost:3080${NC}"
 echo -e "  Backend:  ${CYAN}http://localhost:3001${NC}"
 echo -e "  Health:   ${CYAN}http://localhost:3001/api/health${NC}"
 echo ""
 echo "  Useful commands:"
-echo "    docker compose logs -f     # View logs"
-echo "    docker compose ps          # Check status"
-echo "    docker compose down        # Stop services"
+echo "    $COMPOSE logs -f     # View logs"
+echo "    $COMPOSE ps          # Check status"
+echo "    $COMPOSE down        # Stop services"
 echo ""
