@@ -69,7 +69,7 @@ function formatTime(t: string) {
           <div v-if="item.content" class="flash-content">{{ item.content }}</div>
           <div v-if="item.source" class="flash-source">
             <span>{{ item.source }}</span>
-            <a v-if="item.url" :href="item.url" target="_blank" class="source-link">查看详情</a>
+            <a v-if="item.url" :href="item.url" class="source-link">查看详情</a>
           </div>
         </div>
       </div>

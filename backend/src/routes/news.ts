@@ -1,10 +1,90 @@
 import { Router } from 'express';
 import { PrismaClient } from '@prisma/client';
+import * as cheerio from 'cheerio';
+import axios from 'axios';
 
 const router = Router();
 
 function getPrisma() {
   return new PrismaClient();
+}
+
+// Fetch and clean article content from original URL
+async function fetchArticleContent(url: string): Promise<string> {
+  const { data: html } = await axios.get(url, {
+    timeout: 15000,
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15',
+      'Accept': 'text/html,application/xhtml+xml',
+    },
+  });
+
+  const $ = cheerio.load(html);
+
+  // Remove non-content elements
+  $('script, style, nav, footer, header, aside, iframe, .ad, .advertisement, .sidebar, .nav, .footer, .header, .comment, .share, .related, .recommend, [class*="banner"], [class*="popup"], [class*="modal"], noscript').remove();
+
+  // Try to find the main article content
+  let content = '';
+  const selectors = [
+    'article',
+    '[class*="article-content"]',
+    '[class*="article-body"]',
+    '[class*="post-content"]',
+    '[class*="post-body"]',
+    '[class*="content-wrap"]',
+    '[class*="detail-content"]',
+    '[class*="news-content"]',
+    '.content',
+    'main',
+  ];
+
+  for (const sel of selectors) {
+    const el = $(sel);
+    if (el.length && (el.text()?.trim().length ?? 0) > 200) {
+      content = el.html() || '';
+      break;
+    }
+  }
+
+  // Fallback: use body
+  if (!content) {
+    content = $('body').html() || '';
+  }
+
+  // Clean attributes and fix URLs on the extracted content
+  const $content = cheerio.load(content ?? '');
+  const root = $content.root();
+
+  root.find('*').each((_, el) => {
+    const attrs = Object.keys($content(el).attr() || {});
+    for (const attr of attrs) {
+      if (attr !== 'href' && attr !== 'src') {
+        $content(el).removeAttr(attr);
+      }
+    }
+  });
+
+  // Convert relative URLs to absolute
+  try {
+    const baseUrl = new URL(url);
+    root.find('a[href]').each((_, el) => {
+      const href = $content(el).attr('href');
+      if (href && !href.startsWith('http')) {
+        $content(el).attr('href', new URL(href, baseUrl.origin).href);
+      }
+    });
+    root.find('img[src]').each((_, el) => {
+      const src = $content(el).attr('src');
+      if (src && !src.startsWith('http') && !src.startsWith('data:')) {
+        $content(el).attr('src', new URL(src, baseUrl.origin).href);
+      }
+    });
+  } catch {}
+
+  // Return inner content without html/head/body wrapper
+  const body = $content('body');
+  return body.length ? (body.html() || content) : content;
 }
 
 // GET /api/v1/news/list - News list with pagination
@@ -84,6 +164,28 @@ router.get('/detail/:id', async (req, res) => {
     });
 
     res.json({ code: 0, data: { article, related } });
+  } catch (error: any) {
+    res.status(500).json({ code: -1, message: error.message });
+  } finally {
+    await prisma.$disconnect();
+  }
+});
+
+// GET /api/v1/news/content/:id - Fetch full article content from original URL
+router.get('/content/:id', async (req, res) => {
+  const prisma = getPrisma();
+  try {
+    const article = await prisma.newsArticle.findUnique({
+      where: { id: req.params.id },
+    });
+
+    if (!article) {
+      res.status(404).json({ code: 404, message: 'Article not found' });
+      return;
+    }
+
+    const content = await fetchArticleContent(article.url);
+    res.json({ code: 0, data: { content } });
   } catch (error: any) {
     res.status(500).json({ code: -1, message: error.message });
   } finally {
