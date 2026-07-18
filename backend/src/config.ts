@@ -9,16 +9,26 @@ export const config = {
     baseUrl: 'https://api.coinlore.net/api',
   },
 
+  // RSSHub base URL — local instance or public instance
+  rsshubBase: process.env.RSSHUB_BASE || 'http://rsshub:1200',
+
+  // 中文加密货币 RSS 源（通过 RSSHub 获取）
+  // 仅保留已验证可用的路由，失效路由已移除
   rssSources: [
     {
-      key: 'cointelegraph',
-      name: 'CoinTelegraph',
-      url: 'https://cointelegraph.com/rss',
+      key: 'jinse-lives',
+      name: '金色财经快讯',
+      url: '/jinse/lives',
     },
     {
-      key: 'decrypt',
-      name: 'Decrypt',
-      url: 'https://decrypt.co/feed',
+      key: 'theblockbeats',
+      name: '律动 BlockBeats',
+      url: '/theblockbeats/article',
+    },
+    {
+      key: 'hellobtc',
+      name: '币世界',
+      url: '/hellobtc/news',
     },
   ],
 

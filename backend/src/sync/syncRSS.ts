@@ -31,7 +31,12 @@ function extractImageFromHTML(html: string): string | null {
 
 async function fetchAndParseRSS(url: string): Promise<RSSArticle[]> {
   const { data } = await axios.get(url, { timeout: 15000 });
-  const parser = new XMLParser({ ignoreAttributes: false });
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    processEntities: {
+      maxTotalExpansions: 100000,
+    },
+  });
   const parsed = parser.parse(data);
 
   const items = parsed.rss?.channel?.item;
@@ -120,9 +125,20 @@ export async function syncRSS(
   }
 }
 
+function buildRssUrl(pathOrUrl: string): string {
+  // If it's an absolute URL, use it directly
+  if (pathOrUrl.startsWith('http://') || pathOrUrl.startsWith('https://')) {
+    return pathOrUrl;
+  }
+  // Otherwise, prepend the RSSHub base URL
+  const base = config.rsshubBase.replace(/\/$/, '');
+  return `${base}${pathOrUrl}`;
+}
+
 export async function syncAllRSS(prisma: PrismaClient): Promise<void> {
   for (const source of config.rssSources) {
-    await syncRSS(prisma, source.key, source.name, source.url);
+    const fullUrl = buildRssUrl(source.url);
+    await syncRSS(prisma, source.key, source.name, fullUrl);
     // Pause between sources
     await new Promise((r) => setTimeout(r, 2000));
   }
