@@ -1,0 +1,21 @@
+services:
+  backend:
+    build: ./backend
+    container_name: crypto-backend
+    ports:
+      - "3001:3000"
+    volumes:
+      - backend_data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: crypto-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_data:

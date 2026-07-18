@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Coin {
+  id                    String     @id
+  symbol                String
+  name                  String
+  image                 String?
+  currentPrice          Float?
+  marketCap             Float?
+  marketCapRank         Int?
+  priceChangePercent1h  Float?
+  priceChangePercent24h Float?
+  priceChangePercent7d  Float?
+  totalVolume           Float?
+  circulatingSupply     Float?
+  totalSupply           Float?
+  maxSupply             Float?
+  sparklineIn7d         String?
+  lastUpdated           DateTime?
+  createdAt             DateTime   @default(now())
+  updatedAt             DateTime   @updatedAt
+
+  prices    CoinPrice[]
+
+  @@index([marketCapRank])
+  @@index([symbol])
+}
+
+model CoinPrice {
+  id        Int      @id @default(autoincrement())
+  coinId    String
+  coin      Coin     @relation(fields: [coinId], references: [id])
+  price     Float
+  marketCap Float?
+  volume    Float?
+  timestamp DateTime @default(now())
+
+  @@index([coinId, timestamp])
+}
+
+model NewsArticle {
+  id          String   @id @default(cuid())
+  sourceKey   String
+  sourceName  String
+  title       String
+  url         String
+  description String?
+  imageUrl    String?
+  category    String?
+  author      String?
+  publishedAt DateTime
+  createdAt   DateTime @default(now())
+
+  favorites UserFavorite[]
+
+  @@unique([url])
+  @@index([publishedAt])
+  @@index([category])
+  @@index([sourceKey])
+}
+
+model FlashNews {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String?
+  source      String?
+  url         String?
+  publishedAt DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([publishedAt])
+}
+
+model UserFavorite {
+  id        Int         @id @default(autoincrement())
+  userId    String
+  articleId String
+  article   NewsArticle @relation(fields: [articleId], references: [id])
+  createdAt DateTime    @default(now())
+
+  @@unique([userId, articleId])
+  @@index([userId])
+}
+
+model SyncLog {
+  id        Int      @id @default(autoincrement())
+  task      String
+  status    String
+  count     Int
+  error     String?
+  duration  Int
+  createdAt DateTime @default(now())
+
+  @@index([task, createdAt])
+}
