@@ -7,6 +7,7 @@ const routes = [
   { path: '/market/:id', name: 'marketDetail', component: () => import('../views/market/Detail.vue') },
   { path: '/news', name: 'news', component: () => import('../views/news/Index.vue') },
   { path: '/news/:id', name: 'newsDetail', component: () => import('../views/news/Detail.vue') },
+  { path: '/viewer', name: 'viewer', component: () => import('../views/Viewer.vue') },
   { path: '/user', name: 'user', component: () => import('../views/user/Index.vue') },
 ]
 

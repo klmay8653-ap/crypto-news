@@ -5,7 +5,7 @@ import DefaultLayout from './layout/DefaultLayout.vue'
 
 const route = useRoute()
 const showTabBar = computed(() => {
-  const noTabRoutes = ['newsDetail', 'marketDetail']
+  const noTabRoutes = ['newsDetail', 'marketDetail', 'viewer']
   return !noTabRoutes.includes(route.name as string)
 })
 </script>

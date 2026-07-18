@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useFlashStore } from '../../stores/flash'
 
+const router = useRouter()
 const store = useFlashStore()
 const newCount = ref(0)
 let pollTimer: any = null
@@ -25,6 +27,10 @@ function scrollToTop() {
 function onLoad() {
   if (!store.hasMore) return
   store.fetchList()
+}
+
+function openFlash(url: string, title: string) {
+  router.push(`/viewer?title=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`)
 }
 
 function formatTime(t: string) {
@@ -69,7 +75,7 @@ function formatTime(t: string) {
           <div v-if="item.content" class="flash-content">{{ item.content }}</div>
           <div v-if="item.source" class="flash-source">
             <span>{{ item.source }}</span>
-            <a v-if="item.url" :href="item.url" class="source-link">查看详情</a>
+            <span v-if="item.url" class="source-link" @click="openFlash(item.url, item.title)">查看详情</span>
           </div>
         </div>
       </div>
@@ -121,5 +127,5 @@ function formatTime(t: string) {
 .flash-title { font-size: 15px; font-weight: 500; line-height: 1.5; color: #1f2937; }
 .flash-content { margin-top: 8px; font-size: 13px; line-height: 1.6; color: var(--text-secondary); }
 .flash-source { margin-top: 10px; font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 10px; padding-top: 8px; border-top: 1px solid #f5f5f5; }
-.source-link { color: var(--primary); text-decoration: none; font-weight: 500; }
+.source-link { color: var(--primary); text-decoration: none; font-weight: 500; cursor: pointer; }
 </style>

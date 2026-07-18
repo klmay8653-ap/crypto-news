@@ -8,9 +8,6 @@ const route = useRoute()
 const router = useRouter()
 const store = useNewsStore()
 const favorited = ref(false)
-const showFullContent = ref(false)
-const fullContent = ref('')
-const loadingContent = ref(false)
 
 function getUserId() {
   let id = localStorage.getItem('deviceId')
@@ -34,13 +31,11 @@ function saveHistory(article: any) {
 async function loadArticle(id: string) {
   await store.fetchDetail(id)
   if (store.currentArticle) saveHistory(store.currentArticle)
-  showFullContent.value = false
-  fullContent.value = ''
 }
 
 onMounted(() => loadArticle(route.params.id as string))
 
-// Fix: watch route param changes so related article clicks work
+// Watch route param changes so related article clicks work
 watch(() => route.params.id, (newId) => {
   if (newId) loadArticle(newId as string)
 })
@@ -48,18 +43,11 @@ watch(() => route.params.id, (newId) => {
 function goBack() { router.back() }
 function goNews(id: string) { router.push(`/news/${id}`) }
 
-async function loadFullContent() {
+function openOriginal() {
   if (!store.currentArticle) return
-  loadingContent.value = true
-  showFullContent.value = true
-  try {
-    const res = await api.get(`/news/content/${store.currentArticle.id}`) as any
-    fullContent.value = res.data.content
-  } catch (e) {
-    console.error(e)
-  } finally {
-    loadingContent.value = false
-  }
+  const title = encodeURIComponent(store.currentArticle.title)
+  const url = encodeURIComponent(store.currentArticle.url)
+  router.push(`/viewer?title=${title}&url=${url}`)
 }
 
 async function toggleFavorite() {
@@ -98,21 +86,14 @@ async function toggleFavorite() {
         <img :src="store.currentArticle.imageUrl" class="article-img" @error="$event.target.style.display='none'" />
       </div>
 
-      <div class="article-desc" v-if="store.currentArticle.description && !showFullContent">
+      <div class="article-desc" v-if="store.currentArticle.description">
         {{ store.currentArticle.description }}
       </div>
 
-      <div class="article-actions" v-if="!showFullContent">
-        <van-button type="primary" block round @click="loadFullContent" :loading="loadingContent">
+      <div class="article-actions">
+        <van-button type="primary" block round @click="openOriginal">
           <van-icon name="description-o" /> 阅读全文
         </van-button>
-      </div>
-
-      <!-- Full content -->
-      <div v-if="showFullContent" class="article-full">
-        <van-skeleton :row="8" :loading="loadingContent">
-          <div class="full-content" v-html="fullContent" />
-        </van-skeleton>
       </div>
 
       <!-- Related -->
@@ -147,18 +128,6 @@ async function toggleFavorite() {
 .article-img { width: 100%; display: block; }
 .article-desc { font-size: 16px; line-height: 1.8; color: #374151; margin-bottom: 24px; word-break: break-word; }
 .article-actions { margin-bottom: 28px; }
-
-.article-full { margin-bottom: 28px; }
-.full-content { font-size: 16px; line-height: 1.8; color: #374151; word-break: break-word; overflow-wrap: break-word; }
-.full-content :deep(img) { max-width: 100%; height: auto; border-radius: 8px; margin: 12px 0; }
-.full-content :deep(p) { margin: 0 0 12px; }
-.full-content :deep(h1), .full-content :deep(h2), .full-content :deep(h3) { margin: 16px 0 10px; color: #1f2937; }
-.full-content :deep(a) { color: var(--primary); word-break: break-all; }
-.full-content :deep(blockquote) { border-left: 3px solid var(--primary); padding-left: 12px; margin: 12px 0; color: #6b7280; }
-.full-content :deep(ul), .full-content :deep(ol) { padding-left: 20px; margin: 8px 0; }
-.full-content :deep(pre) { background: #f3f4f6; padding: 12px; border-radius: 8px; overflow-x: auto; font-size: 14px; }
-.full-content :deep(table) { width: 100%; border-collapse: collapse; margin: 12px 0; }
-.full-content :deep(th), .full-content :deep(td) { border: 1px solid #e5e7eb; padding: 8px; text-align: left; }
 
 .related-section { border-top: 1px solid #f0f0f0; padding-top: 18px; }
 .related-header { font-size: 17px; font-weight: 700; margin-bottom: 14px; color: #1f2937; }
